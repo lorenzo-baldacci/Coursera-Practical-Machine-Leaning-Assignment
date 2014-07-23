@@ -25,7 +25,6 @@ library(caret)
 
 training_raw <- read.csv('pml-training.csv', na.strings= c("NA",""))
 testing_raw <- read.csv('pml-testing.csv', na.strings= c("NA",""))
-head(training_raw)
 ```
 
 2. Cleaning and Feature Selection
