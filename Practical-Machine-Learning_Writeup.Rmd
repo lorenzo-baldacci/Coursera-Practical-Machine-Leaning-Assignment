@@ -1,0 +1,84 @@
+---
+title: "Coursera Practical Machine Learning Writeup"
+author: "Lorenzo Baldacci"
+date: "Tuesday, July 22, 2014"
+output: html_document
+---
+1. Introduction
+====================
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+
+In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+2. The Dataset
+====================
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+Here the chunk of code for reading the dataset and a sample of it:
+
+```{r}
+library(caret)
+
+training_raw <- read.csv('pml-training.csv', na.strings= c("NA",""))
+testing_raw <- read.csv('pml-testing.csv', na.strings= c("NA",""))
+head(training_raw)
+```
+
+2. Cleaning and Feature Selection
+====================
+
+Few variables are not related to the class as they hold information about the user performing the exercise or date/time when the execise was taken (e.g. user_name, raw_timestamp_part_1, new_window). We are instead interested in those variables holdin sensor's data. 
+
+In the chunk of code below I keep those variables realated to sensors (e.g. belt, arm, dumbbell, forearm) and the `classe` variable as it holds the classification of the activity performed by the user.
+
+A further check is done on NA values, variable showing NA are discarded as well.
+
+```{r}
+sensor_col <- grepl("belt|arm|dumbbell|forearm|classe",names(training_raw))
+training_set <- training_raw[,sensor_col]
+null_col <- colSums(is.na(training_set))!=0
+training_set <- training_set[,!null_col]
+```
+
+3. Data Processing and Training
+====================
+
+I proceed with the split of the original training set into two subsets: training (80% of original observations) and validation (20% of original observations). 
+
+I then proceed with the model training using the Random Forest method which leads to very promising results as suggested by the accuracy reached on its validation phase:
+
+
+```{r}
+set.seed(1234)
+training_cv_index <- createDataPartition(training_set$classe,list=FALSE ,p=0.8)
+training_cv <- training_set[training_cv_index,]
+validation_cv <- training_set[-training_cv_index,]
+
+model <- train(classe~., data=training_cv, method="rf")
+model
+```
+
+4. Model Validation
+====================
+
+The trained model is validated by means of the confusion matrix which is created by predicting the validation set and by comparing the predicted resuts and the actual classes. Below the confusion matrix details:
+
+```{r}
+confusionMatrix(validation_cv$classe,predict(model,validation_cv))
+```
+
+The cross-validation accuracy reached is 99.7% with a confidence of at least 99.4%. On the basis of this result we are good to move on and predict the given testing set. 
+
+5. Predict Testing Values
+====================
+
+Below the prediction phase and results obtained:
+
+```{r}
+result <-predict(model,testing_raw)
+result
+```
